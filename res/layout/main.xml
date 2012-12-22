@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+              android:orientation="vertical"
+              android:layout_width="fill_parent"
+              android:layout_height="fill_parent"
+        >
+
+    <TextView
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:text="Hello World, RemoteControlActivity"
+            android:id="@+id/status_textView"
+            />
+
+    <RelativeLayout
+            android:orientation="vertical"
+            android:layout_width="fill_parent"
+            android:layout_height="fill_parent">
+
+        <Button
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Connect to KJunior"
+                android:id="@+id/connectButton"
+                android:layout_alignParentLeft="true"
+                android:layout_alignParentTop="true"/>
+
+        <NumberPicker
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:id="@+id/numberPicker"
+                android:layout_alignLeft="@+id/connectButton"
+                android:layout_below="@+id/connectButton"
+                />
+
+        <Button
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Set speed"
+                android:id="@+id/set_speed_button"
+                android:layout_alignLeft="@+id/connectButton"
+                android:layout_below="@+id/numberPicker"/>
+
+        <ToggleButton
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Buzzer"
+                android:id="@+id/buzzer_toggleButton"
+                android:textOff="Buzzer"
+                android:textOn="Buzzer"
+                android:textSize="20dp"
+                android:layout_alignParentRight="true"
+                android:layout_below="@+id/connectButton"
+                android:onClick="onToggleClicked"/>
+
+    </RelativeLayout>
+
+</LinearLayout>
+
