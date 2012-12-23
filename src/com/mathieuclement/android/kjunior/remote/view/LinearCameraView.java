@@ -6,6 +6,8 @@ import android.graphics.Paint;
 import android.util.AttributeSet;
 import android.view.View;
 
+import java.util.Arrays;
+
 /**
  * Author: Mathieu Clément
  * Date: 22.12.2012
@@ -40,5 +42,11 @@ public class LinearCameraView extends View {
             y += 10;
             canvas.drawRect((float) y - 10, (float) 0, (float) y, (float) 400, paint);
         }
+    }
+
+    public void clear() {
+        // Fill arrays with 0
+        Arrays.fill(linearCameraPixels, 0);
+        invalidate();
     }
 }

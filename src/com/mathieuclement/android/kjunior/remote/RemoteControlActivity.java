@@ -30,6 +30,8 @@ public class RemoteControlActivity extends Activity implements ChooseDialogFragm
 
     // TODO LinearCameraView stops refreshing when a serial command is sent
 
+    // TODO Show framerate
+
     private static final String TAG = "KJuniorRemote";
 
     // See file:///home/mathieu/dev/android-sdk-linux/docs/guide/topics/connectivity/bluetooth.html
@@ -43,6 +45,7 @@ public class RemoteControlActivity extends Activity implements ChooseDialogFragm
 
     private LinearCameraView linearCameraView;
     private SerialPortMessageReceptionThread receiverThread;
+    private boolean wasConnectedBeforePausing;
 
     /**
      * Called when the activity is first created.
@@ -167,15 +170,21 @@ public class RemoteControlActivity extends Activity implements ChooseDialogFragm
     }
 
     private void connectToKJunior(int deviceIndex) {
-        setStatus("Connecting to KJunior device...");
-
         // Make Bluetooth connection with the Bluetooth device at index deviceIndex of robotDevices list
-        activeBluetoothDevice = robotBluetoothDevices.get(deviceIndex);
+        connectToKJunior(robotBluetoothDevices.get(deviceIndex));
+    }
+
+    private void connectToKJunior(BluetoothDevice bluetoothDevice) {
+        setStatus("Connecting to KJunior device...");
+        Button connectButton = (Button) findViewById(R.id.connectButton);
+        connectButton.setEnabled(false);
+
+        activeBluetoothDevice = bluetoothDevice;
 
         // Create a socket to operate as a virtual serial port
         // See http://nononux.free.fr/index.php?page=elec-brico-bluetooth-android-microcontroleur
         try {
-            virtualPortSocket = activeBluetoothDevice.createRfcommSocketToServiceRecord(UUID.fromString("00001101-0000-1000-8000-00805F9B34FB"));
+            virtualPortSocket = bluetoothDevice.createRfcommSocketToServiceRecord(UUID.fromString("00001101-0000-1000-8000-00805F9B34FB"));
 
             receiveStream = virtualPortSocket.getInputStream();
             sendStream = virtualPortSocket.getOutputStream();
@@ -194,6 +203,7 @@ public class RemoteControlActivity extends Activity implements ChooseDialogFragm
                             public void run() {
                                 final Button connectButton = (Button) findViewById(R.id.connectButton);
                                 connectButton.setText("Disconnect from KJunior");
+                                connectButton.setEnabled(true);
                                 connectButton.setOnClickListener(new View.OnClickListener() {
                                     @Override
                                     public void onClick(View v) {
@@ -217,6 +227,9 @@ public class RemoteControlActivity extends Activity implements ChooseDialogFragm
                                                 showConnectDialog();
                                             }
                                         });
+
+                                        // Clear out camera view
+                                        linearCameraView.clear();
                                     }
                                 });
                             }
@@ -256,6 +269,42 @@ public class RemoteControlActivity extends Activity implements ChooseDialogFragm
 
     @Override
     public void onChooseDialogCancelled(DialogFragment dialog) {
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+
+        if (virtualPortSocket.isConnected()) {
+            wasConnectedBeforePausing = true;
+            try {
+                virtualPortSocket.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        } else {
+            wasConnectedBeforePausing = false;
+        }
+    }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+
+        if (wasConnectedBeforePausing) {
+            connectToKJunior(activeBluetoothDevice);
+        }
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+
+        try {
+            virtualPortSocket.close();
+        } catch (IOException e) {
+            // Ignore
+        }
     }
 
     // A toggle button from the view was "toggled"
