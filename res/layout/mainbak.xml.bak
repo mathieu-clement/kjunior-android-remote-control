@@ -25,6 +25,22 @@
                 android:layout_alignParentLeft="true"
                 android:layout_alignParentTop="true"/>
 
+        <NumberPicker
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:id="@+id/numberPicker"
+                android:layout_alignLeft="@+id/connectButton"
+                android:layout_below="@+id/connectButton"
+                />
+
+
+        <Button
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Set speed"
+                android:id="@+id/set_speed_button"
+                android:layout_alignLeft="@+id/connectButton"
+                android:layout_below="@+id/numberPicker"/>
 
         <ToggleButton
                 android:layout_width="wrap_content"
@@ -34,9 +50,9 @@
                 android:textOff="Buzzer"
                 android:textOn="Buzzer"
                 android:textSize="20dp"
-                android:onClick="onToggleClicked"
-                android:layout_alignRight="@+id/linear_camera_view"
-                android:layout_alignTop="@+id/connectButton"/>
+                android:layout_alignParentRight="true"
+                android:layout_below="@+id/connectButton"
+                android:onClick="onToggleClicked"/>
 
         <view
                 android:layout_width="wrap_content"
@@ -44,10 +60,24 @@
                 class="com.mathieuclement.android.kjunior.remote.view.LinearCameraView"
                 android:id="@+id/linear_camera_view"
                 android:longClickable="false"
-                android:visibility="visible"
-                android:layout_alignParentLeft="true"
-                android:layout_marginLeft="8dp"
+                android:layout_alignLeft="@+id/connectButton"
+                android:layout_below="@+id/set_speed_button"
+                android:visibility="visible"/>
+
+        <NumberPicker
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:id="@+id/exposure_time_number_picker"
+                android:layout_toRightOf="@+id/set_speed_button"
                 android:layout_below="@+id/connectButton"/>
+
+        <Button
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Set exposure time"
+                android:id="@+id/set_exposure_time_button"
+                android:layout_toRightOf="@+id/set_speed_button"
+                android:layout_below="@+id/numberPicker"/>
 
     </RelativeLayout>
 

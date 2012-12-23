@@ -16,6 +16,7 @@ import android.widget.TextView;
 import android.widget.ToggleButton;
 import com.mathieuclement.android.kjunior.remote.dialog.AlertDialogFragment;
 import com.mathieuclement.android.kjunior.remote.dialog.ChooseDialogFragment;
+import com.mathieuclement.android.kjunior.remote.view.LinearCameraView;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -26,6 +27,8 @@ public class RemoteControlActivity extends Activity implements ChooseDialogFragm
 
     // TODO I suppose the user has already paired his phone with the Bluetooth device
     // It would be better that we query paired devices, and if not found we scan the devices, ask for pairing and so on...
+
+    // TODO LinearCameraView stops refreshing when a serial command is sent
 
     private static final String TAG = "KJuniorRemote";
 
@@ -38,6 +41,9 @@ public class RemoteControlActivity extends Activity implements ChooseDialogFragm
     private InputStream receiveStream = null; // Bluetooth (virtual) serial reception channel
     private OutputStream sendStream = null; // Bluetooth (virtual) serial emission channel
 
+    private LinearCameraView linearCameraView;
+    private SerialPortMessageReceptionThread receiverThread;
+
     /**
      * Called when the activity is first created.
      */
@@ -46,11 +52,32 @@ public class RemoteControlActivity extends Activity implements ChooseDialogFragm
         super.onCreate(savedInstanceState);
         setContentView(R.layout.main);
 
+        // Set linear camera view
+        linearCameraView = (LinearCameraView) findViewById(R.id.linear_camera_view);
+
+        // Exposure time picker
+        /*final NumberPicker exposurePicker = (NumberPicker) findViewById(R.id.exposure_time_number_picker);
+        exposurePicker.setMinValue(1);
+        exposurePicker.setMaxValue(10);
+        exposurePicker.setValue(5); // Default value when starting KJunior (must be set in K-Junior main() method)
+
+        // Exposure time button
+        final Button exposureButton = (Button) findViewById(R.id.set_exposure_time_button);
+        exposureButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                // Send command
+                String hexValue = Integer.toHexString(exposurePicker.getValue());
+                sendSerialPortData("W,C0,21," + "0" + hexValue.toUpperCase() + "\r\n");
+            }
+        });
+        */
+
         // Set initial status
         setStatus("Hello, tell me what to do.");
 
         // Start data reception thread
-        SerialPortMessageReceptionThread receiverThread = new SerialPortMessageReceptionThread(handler);
+        receiverThread = new SerialPortMessageReceptionThread(handler);
         receiverThread.start();
 
         // "Connect to KJunior" button listener
@@ -61,7 +88,6 @@ public class RemoteControlActivity extends Activity implements ChooseDialogFragm
                 showConnectDialog();
             }
         });
-
 
         bAdapter = BluetoothAdapter.getDefaultAdapter();
         if (bAdapter == null) {
@@ -125,6 +151,12 @@ public class RemoteControlActivity extends Activity implements ChooseDialogFragm
         String[] robotsNames = new String[robotBluetoothDevices.size()];
         for (int i = 0; i < robotBluetoothDevices.size(); i++) {
             robotsNames[i] = robotBluetoothDevices.get(i).getName();
+        }
+
+        // Do not show dialog if there is only one K-Junior...
+        if (robotBluetoothDevices.size() == 1) {
+            connectToKJunior(0);
+            return;
         }
 
         // Display a bluetooth device chooser
@@ -242,7 +274,12 @@ public class RemoteControlActivity extends Activity implements ChooseDialogFragm
         }
     }
 
+    boolean cameraViewMustPause = false;
+
     public void sendSerialPortData(String data) {
+        // Stop camera view
+        cameraViewMustPause = true;
+
         try {
             // Write message to sending buffer
             sendStream.write(data.getBytes());
@@ -254,6 +291,9 @@ public class RemoteControlActivity extends Activity implements ChooseDialogFragm
             e.printStackTrace();
             setStatus("Could not transmit last bunch of data.");
         }
+
+        // Restart camera view
+        cameraViewMustPause = false;
     }
 
     private class MyHandler extends Handler {
@@ -286,14 +326,77 @@ public class RemoteControlActivity extends Activity implements ChooseDialogFragm
 
         @Override
         public void run() {
+            int pixelsIndex = 0; // index for managing the pixels array
+            int currentToken; // the token currently read (int, one character)
+            char charToken;
+            String digitBuffer = ""; // used in order to get ints from 1 or more
+            // chars
+
+            while (true) {
+                // On teste si des données sont disponibles
+                try {
+                    if (!cameraViewMustPause && receiveStream != null && virtualPortSocket.isConnected() && receiveStream.available() > 0) {
+
+                        try {
+                            currentToken = receiveStream.read(); // gets the next char from the
+
+                            charToken = (char) currentToken;
+
+                            // file
+                            if (currentToken == -1) { // if the end of the file is
+                                // reached, loops again until new
+                                // input
+                            } else if (charToken == '\r') {
+                            } else if (charToken == '\n') { // if the end of a line is
+                                // reached
+                                // displays the new frame on the screen
+                                Log.i(TAG, "End of line");
+                                runOnUiThread(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        linearCameraView.invalidate();
+                                    }
+                                });
+                                pixelsIndex = 0; // begins a new line of pixels
+                            } else if (charToken == ' ') {
+                                // try converting the tokens appearing before the space
+                                // in integer
+                                linearCameraView.linearCameraPixels[pixelsIndex] = Integer.parseInt(digitBuffer);
+                                pixelsIndex++; // if no exception occurred, prepares for
+                                // the next pixel
+                                digitBuffer = "";
+
+                            } else {
+                                digitBuffer += (char) currentToken; // adds the char to
+                                // the buffer string
+                                // this string will be converted into integer when the
+                                // next space is met
+                            }
+                        } catch (Exception e) {
+                            // if an exception occurs, loops again
+                            //e.printStackTrace();
+                            continue;
+
+                        }
+                    }
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+
+            }
+
+
+
+
+            /*
             while (true) {
                 try {
                     // On teste si des données sont disponibles
                     if (receiveStream != null && virtualPortSocket.isConnected() && receiveStream.available() > 0) {
-                        byte buffer[] = new byte[100];
+                        byte buffer[] = new byte[410];
 
                         // On lit les données, k représente le nombre de bytes lu
-                        int k = receiveStream.read(buffer, 0, 100);
+                        int k = receiveStream.read(buffer, 0, 410);
 
                         if (k > 0) {
                             // On convertit les données en String
@@ -314,6 +417,7 @@ public class RemoteControlActivity extends Activity implements ChooseDialogFragm
                     e.printStackTrace();
                 }
             }
+            */
         }
     }
 }
