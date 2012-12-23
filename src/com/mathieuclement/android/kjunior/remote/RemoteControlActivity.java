@@ -203,6 +203,7 @@ public class RemoteControlActivity extends Activity implements ChooseDialogFragm
                             public void run() {
                                 final Button connectButton = (Button) findViewById(R.id.connectButton);
                                 connectButton.setText("Disconnect from KJunior");
+                                ((TextView) findViewById(R.id.fps_textView)).setText("");
                                 connectButton.setEnabled(true);
                                 connectButton.setOnClickListener(new View.OnClickListener() {
                                     @Override
@@ -251,6 +252,8 @@ public class RemoteControlActivity extends Activity implements ChooseDialogFragm
     private void setStatus(String str) {
         TextView statusTextView = (TextView) findViewById(R.id.status_textView);
         statusTextView.setText(str);
+
+        findViewById(R.id.connectButton).setEnabled(true);
     }
 
     @Override
@@ -323,11 +326,11 @@ public class RemoteControlActivity extends Activity implements ChooseDialogFragm
         }
     }
 
-    boolean cameraViewMustPause = false;
+    boolean cameraViewMustStop = false;
 
     public void sendSerialPortData(String data) {
         // Stop camera view
-        cameraViewMustPause = true;
+        cameraViewMustStop = true;
 
         try {
             // Write message to sending buffer
@@ -336,13 +339,14 @@ public class RemoteControlActivity extends Activity implements ChooseDialogFragm
             // Make sure they are sent now
             sendStream.flush();
 
+            //virtualPortSocket.close();
+            //cameraViewMustStop = true;
+            //connectToKJunior(activeBluetoothDevice);
+
         } catch (IOException e) {
             e.printStackTrace();
             setStatus("Could not transmit last bunch of data.");
         }
-
-        // Restart camera view
-        cameraViewMustPause = false;
     }
 
     private class MyHandler extends Handler {
@@ -368,6 +372,8 @@ public class RemoteControlActivity extends Activity implements ChooseDialogFragm
 
     private class SerialPortMessageReceptionThread extends Thread {
         Handler handler;
+        private long lastFpsCountTime;
+        private int framesSinceLastCount = 0;
 
         SerialPortMessageReceptionThread(Handler h) {
             handler = h;
@@ -381,10 +387,13 @@ public class RemoteControlActivity extends Activity implements ChooseDialogFragm
             String digitBuffer = ""; // used in order to get ints from 1 or more
             // chars
 
-            while (true) {
+            cameraViewMustStop = false;
+            lastFpsCountTime = new Date().getTime();
+
+            while (!cameraViewMustStop) {
                 // On teste si des données sont disponibles
                 try {
-                    if (!cameraViewMustPause && receiveStream != null && virtualPortSocket.isConnected() && receiveStream.available() > 0) {
+                    if (receiveStream != null && virtualPortSocket.isConnected() && receiveStream.available() > 0) {
 
                         try {
                             currentToken = receiveStream.read(); // gets the next char from the
@@ -399,7 +408,6 @@ public class RemoteControlActivity extends Activity implements ChooseDialogFragm
                             } else if (charToken == '\n') { // if the end of a line is
                                 // reached
                                 // displays the new frame on the screen
-                                Log.i(TAG, "End of line");
                                 runOnUiThread(new Runnable() {
                                     @Override
                                     public void run() {
@@ -407,6 +415,25 @@ public class RemoteControlActivity extends Activity implements ChooseDialogFragm
                                     }
                                 });
                                 pixelsIndex = 0; // begins a new line of pixels
+
+                                // Frame-per-second count
+                                // Every 5 seconds count how much frames have been displayed and update the UI text view
+                                if ((new Date().getTime() - lastFpsCountTime) > 2000) {
+                                    lastFpsCountTime = new Date().getTime();
+                                    // Update UI
+                                    runOnUiThread(new Runnable() {
+                                        @Override
+                                        public void run() {
+                                            TextView fpsTextView = (TextView) findViewById(R.id.fps_textView);
+                                            fpsTextView.setText(String.format("%.2f fps", framesSinceLastCount / 2.0));
+                                            fpsTextView.invalidate();
+                                            framesSinceLastCount = 0;
+
+                                        }
+                                    });
+                                } else {
+                                    framesSinceLastCount++;
+                                }
                             } else if (charToken == ' ') {
                                 // try converting the tokens appearing before the space
                                 // in integer

@@ -41,7 +41,7 @@
 
         <view
                 android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
+                android:layout_height="400px"
                 class="com.mathieuclement.android.kjunior.remote.view.LinearCameraView"
                 android:id="@+id/linear_camera_view"
                 android:longClickable="false"
@@ -49,6 +49,16 @@
                 android:layout_alignParentLeft="true"
                 android:layout_marginLeft="8dp"
                 android:layout_below="@+id/connectButton"/>
+
+        <TextView
+                android:layout_width="139dp"
+                android:layout_height="wrap_content"
+                android:id="@+id/fps_textView"
+                android:layout_alignLeft="@+id/buzzer_toggleButton"
+                android:layout_below="@+id/linear_camera_view"
+                android:singleLine="true"
+                android:textAlignment="textEnd"
+                />
 
     </RelativeLayout>
 
