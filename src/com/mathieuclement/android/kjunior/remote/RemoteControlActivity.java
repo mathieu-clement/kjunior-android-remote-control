@@ -203,7 +203,6 @@ public class RemoteControlActivity extends Activity implements ChooseDialogFragm
                             public void run() {
                                 final Button connectButton = (Button) findViewById(R.id.connectButton);
                                 connectButton.setText("Disconnect from KJunior");
-                                ((TextView) findViewById(R.id.fps_textView)).setText("");
                                 connectButton.setEnabled(true);
                                 connectButton.setOnClickListener(new View.OnClickListener() {
                                     @Override
@@ -219,6 +218,7 @@ public class RemoteControlActivity extends Activity implements ChooseDialogFragm
                                                 }
                                             }
                                         }.start();
+                                        ((TextView) findViewById(R.id.fps_textView)).setText("");
                                         setStatus("Disconnected. Tell me what to do now.");
 
                                         connectButton.setText("Connect to KJunior");
@@ -418,14 +418,14 @@ public class RemoteControlActivity extends Activity implements ChooseDialogFragm
 
                                 // Frame-per-second count
                                 // Every 5 seconds count how much frames have been displayed and update the UI text view
-                                if ((new Date().getTime() - lastFpsCountTime) > 2000) {
+                                if ((new Date().getTime() - lastFpsCountTime) > 1000) {
                                     lastFpsCountTime = new Date().getTime();
                                     // Update UI
                                     runOnUiThread(new Runnable() {
                                         @Override
                                         public void run() {
                                             TextView fpsTextView = (TextView) findViewById(R.id.fps_textView);
-                                            fpsTextView.setText(String.format("%.2f fps", framesSinceLastCount / 2.0));
+                                            fpsTextView.setText(String.format("%.2f fps", framesSinceLastCount / 1.0));
                                             fpsTextView.invalidate();
                                             framesSinceLastCount = 0;
 
