@@ -257,7 +257,8 @@ public class RemoteControlActivity extends Activity implements ChooseDialogFragm
                     } catch (IOException e) {
                         e.printStackTrace();
                         Log.e(TAG, "Error while connecting to socket", e);
-                        handler.setStatus("Error! Could not connect to virtual serial port!");
+                        handler.setStatus("Error! Could not connect to virtual serial port! Is the robot switched on? " +
+                                "Otherwise reboot it.");
                     }
                 }
             }.start();
