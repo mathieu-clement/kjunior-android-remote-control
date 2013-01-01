@@ -76,21 +76,9 @@ public class RemoteControlActivity extends Activity implements ChooseDialogFragm
         });
         */
 
-        // Set initial status
-        setStatus("Hello, tell me what to do.");
+        setStatus("Hello, tell me what to do now.");
 
-        // Start data reception thread
-        receiverThread = new SerialPortMessageReceptionThread(handler);
-        receiverThread.start();
-
-        // "Connect to KJunior" button listener
         Button connectButton = (Button) findViewById(R.id.connectButton);
-        connectButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                showConnectDialog();
-            }
-        });
 
         bAdapter = BluetoothAdapter.getDefaultAdapter();
         if (bAdapter == null) {
@@ -101,16 +89,18 @@ public class RemoteControlActivity extends Activity implements ChooseDialogFragm
             DialogFragment newFragment = AlertDialogFragment.newInstance("Fatal error",
                     "Bluetooth is a critical requirement but is not available on your device.");
             newFragment.show(getFragmentManager(), "bluetooth_missing_dialog");
-        } else {
-            // Check bluetooth is turned on
-            if (!bAdapter.isEnabled()) {
-                Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
-                // Ask Android OS (and hence the user) to enable it
-                // This is an asynchronous process, the result will be a method call to onActivityResult()
-                // with the passed code (REQUEST_ENABLED_BT)
-                startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT);
-            }
+
+            connectButton.setEnabled(false);
+
+            // TODO Maybe we should stupidly exit the application at this point
         }
+
+        connectButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                showConnectDialog();
+            }
+        });
     }
 
     private void showConnectDialog() {
@@ -136,8 +126,10 @@ public class RemoteControlActivity extends Activity implements ChooseDialogFragm
         }
 
         if (robotBluetoothDevices.isEmpty()) {
-            AlertDialogFragment.newInstance("Device not found", "No K-Junior robot could be found. Please note that" +
-                    "the device should already be paired on phone for this to work.");
+            AlertDialogFragment alertDialogFragment = AlertDialogFragment.newInstance("Device not found",
+                    "No K-Junior robot could be detected. Note that you need to pair your phone with the robot " +
+                            "prior to use it with this application.");
+            alertDialogFragment.show(getFragmentManager(), "device_not_found_dialog");
 
             return;
         }
@@ -175,6 +167,31 @@ public class RemoteControlActivity extends Activity implements ChooseDialogFragm
     }
 
     private void connectToKJunior(BluetoothDevice bluetoothDevice) {
+        // First thing to do is check that Bluetooth is available and enabled
+        // Check bluetooth is turned on
+
+        // Check phone has Bluetooth capability
+        if (bAdapter == null) {
+            // WTF? User has been warned about this problem but still wants to connect. Come on...
+            // Tell him again then with the dialog
+            DialogFragment newFragment = AlertDialogFragment.newInstance("Fatal error",
+                    "You cannot connect because this requires Bluetooth capability and your phone doesn't have it.");
+            newFragment.show(getFragmentManager(), "bluetooth_missing_dialog");
+            return;
+
+        }
+
+        if (!bAdapter.isEnabled()) {
+            Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
+            // Ask Android OS (and hence the user) to enable it
+            // This is an asynchronous process, the result will be a method call to onActivityResult()
+            // with the passed code (REQUEST_ENABLED_BT)
+            startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT);
+            return; // Exit this method. As a result, user will have to tap the Connect button again.
+        } else {
+            onBluetoothOk();
+        }
+
         setStatus("Connecting to KJunior device...");
         Button connectButton = (Button) findViewById(R.id.connectButton);
         connectButton.setEnabled(false);
@@ -256,11 +273,22 @@ public class RemoteControlActivity extends Activity implements ChooseDialogFragm
         findViewById(R.id.connectButton).setEnabled(true);
     }
 
+    private void onBluetoothOk() {
+        // Set initial status
+        setStatus("Bluetooth enabled, connecting to device...");
+
+        // Start data reception thread
+        receiverThread = new SerialPortMessageReceptionThread(handler);
+        receiverThread.start();
+    }
+
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         if (requestCode == REQUEST_ENABLE_BT) {
             if (resultCode == RESULT_OK) {
-                setStatus("Bluetooth is enabled.");
+                onBluetoothOk();
+            } else if (resultCode == RESULT_CANCELED) {
+                setStatus("Mmmh.... how do you want me to talk with your robot if you don't enable Bluetooth?");
             }
         }
     }
@@ -278,7 +306,7 @@ public class RemoteControlActivity extends Activity implements ChooseDialogFragm
     protected void onPause() {
         super.onPause();
 
-        if (virtualPortSocket.isConnected()) {
+        if (virtualPortSocket != null && virtualPortSocket.isConnected()) {
             wasConnectedBeforePausing = true;
             try {
                 virtualPortSocket.close();
@@ -304,7 +332,9 @@ public class RemoteControlActivity extends Activity implements ChooseDialogFragm
         super.onStop();
 
         try {
-            virtualPortSocket.close();
+            if (virtualPortSocket != null) {
+                virtualPortSocket.close();
+            }
         } catch (IOException e) {
             // Ignore
         }
@@ -315,6 +345,8 @@ public class RemoteControlActivity extends Activity implements ChooseDialogFragm
         // Is the toggle on?
         boolean on = ((ToggleButton) view).isChecked();
 
+        // TODO RE-enable
+        /*
         if (view.equals(findViewById(R.id.buzzer_toggleButton))) {
             if (on) {
                 // Buzz!
@@ -324,6 +356,7 @@ public class RemoteControlActivity extends Activity implements ChooseDialogFragm
                 sendSerialPortData("H,0\n");
             }
         }
+        */
     }
 
     boolean cameraViewMustStop = false;
