@@ -104,7 +104,34 @@ public class RemoteControlActivity extends Activity implements ChooseDialogFragm
     }
 
     private void showConnectDialog() {
+        // First thing to do is check that Bluetooth is available and enabled
+        // Check bluetooth is turned on
+
+        // Check phone has Bluetooth capability
+        if (bAdapter == null) {
+            // WTF? User has been warned about this problem but still wants to connect. Come on...
+            // Tell him again then with the dialog
+            DialogFragment newFragment = AlertDialogFragment.newInstance("Fatal error",
+                    "You cannot connect because this requires Bluetooth capability and your phone doesn't have it.");
+            newFragment.show(getFragmentManager(), "bluetooth_missing_dialog");
+            return;
+
+        }
+
+        if (!bAdapter.isEnabled()) {
+            Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
+            // Ask Android OS (and hence the user) to enable it
+            // This is an asynchronous process, the result will be a method call to onActivityResult()
+            // with the passed code (REQUEST_ENABLED_BT)
+            startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT);
+            return; // Exit this method. As a result, user will have to tap the Connect button again.
+        } else {
+            onBluetoothOk();
+        }
+
         // Find Bluetooth devices
+        // TODO Detect devices currently available at this moment
+        // This below only looks in devices paired with the phone in the past and ignores their presence or absence now.
         Set<BluetoothDevice> pairedDevices = bAdapter.getBondedDevices();
 
         // K-Junior devices
@@ -167,31 +194,6 @@ public class RemoteControlActivity extends Activity implements ChooseDialogFragm
     }
 
     private void connectToKJunior(BluetoothDevice bluetoothDevice) {
-        // First thing to do is check that Bluetooth is available and enabled
-        // Check bluetooth is turned on
-
-        // Check phone has Bluetooth capability
-        if (bAdapter == null) {
-            // WTF? User has been warned about this problem but still wants to connect. Come on...
-            // Tell him again then with the dialog
-            DialogFragment newFragment = AlertDialogFragment.newInstance("Fatal error",
-                    "You cannot connect because this requires Bluetooth capability and your phone doesn't have it.");
-            newFragment.show(getFragmentManager(), "bluetooth_missing_dialog");
-            return;
-
-        }
-
-        if (!bAdapter.isEnabled()) {
-            Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
-            // Ask Android OS (and hence the user) to enable it
-            // This is an asynchronous process, the result will be a method call to onActivityResult()
-            // with the passed code (REQUEST_ENABLED_BT)
-            startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT);
-            return; // Exit this method. As a result, user will have to tap the Connect button again.
-        } else {
-            onBluetoothOk();
-        }
-
         setStatus("Connecting to KJunior device...");
         Button connectButton = (Button) findViewById(R.id.connectButton);
         connectButton.setEnabled(false);
@@ -275,7 +277,7 @@ public class RemoteControlActivity extends Activity implements ChooseDialogFragm
 
     private void onBluetoothOk() {
         // Set initial status
-        setStatus("Bluetooth enabled, connecting to device...");
+        setStatus("Bluetooth enabled. You can now try connecting again.");
 
         // Start data reception thread
         receiverThread = new SerialPortMessageReceptionThread(handler);
